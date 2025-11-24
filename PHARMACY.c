@@ -159,27 +159,73 @@ int main() {
 // --------------------------------------------------------
 // MEDICINE MANAGEMENT
 // --------------------------------------------------------
+int isMedicineIdExists(int id) {
+    struct Medicine m;
+    FILE *fp = fopen("medicine.dat", "rb");
+    if (!fp) return 0; // file does not exist
+
+    while (fread(&m, sizeof(m), 1, fp) == 1) {
+        if (m.id == id) {
+            fclose(fp);
+            return 1; // ID exists
+        }
+    }
+
+    fclose(fp);
+    return 0; // ID not found
+}
 void addMedicine() {
     struct Medicine m;
+    int day, month, year;
 
+    // ID
     printf("\nEnter ID: ");
     scanf("%d", &m.id);
+    if (isMedicineIdExists(m.id)) {
+        printf("Error: Medicine ID already exists!\n");
+        return;
+    }
 
+    // Name
     printf("Enter Name: ");
     scanf(" %[^\n]", m.name);
 
+    // Company
     printf("Enter Company: ");
     scanf(" %[^\n]", m.company);
 
-    printf("Enter Quantity: ");
-    scanf("%d", &m.quantity);
+    // Quantity validation
+    do {
+        printf("Enter Quantity: ");
+        scanf("%d", &m.quantity);
+        if (m.quantity < 0)
+            printf("Quantity cannot be negative! Try again.\n");
+    } while (m.quantity < 0);
 
-    printf("Enter Price: ");
-    scanf("%f", &m.price);
+    // Price validation
+    do {
+        printf("Enter Price: ");
+        scanf("%f", &m.price);
+        if (m.price < 0)
+            printf("Price cannot be negative! Try again.\n");
+    } while (m.price < 0);
 
-    printf("Enter Expiry (DD/MM/YYYY): ");
-    scanf(" %[^\n]", m.expiry);
+    // Expiry date validation
+    while (1) {
+        printf("Enter Expiry (DD/MM/YYYY): ");
+        scanf(" %[^\n]", m.expiry);
 
+        if (sscanf(m.expiry, "%d/%d/%d", &day, &month, &year) != 3 ||
+            day < 1 || day > 31 ||
+            month < 1 || month > 12 ||
+            year < 2025) {
+            printf("Invalid expiry date! Please enter again.\n");
+        } else {
+            break; // valid date
+        }
+    }
+
+    // Save to file
     FILE *fp = fopen("medicine.dat", "ab");
     fwrite(&m, sizeof(m), 1, fp);
     fclose(fp);
@@ -242,6 +288,22 @@ void searchMedicine() {
     fclose(fp);
 }
 
+int isMedicineIdExistsForUpdate(int newId, int currentId) {
+    struct Medicine m;
+    FILE *fp = fopen("medicine.dat", "rb");
+    if (!fp) return 0;
+
+    while (fread(&m, sizeof(m), 1, fp) == 1) {
+        if (m.id == newId && m.id != currentId) { // ignore current record
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 void updateMedicine() {
     struct Medicine m;
     int id, found = 0;
@@ -255,16 +317,32 @@ void updateMedicine() {
     while (fread(&m, sizeof(m), 1, fp) == 1) {
         if (m.id == id) {
             found = 1;
-            printf("\nEnter New Name: ");
+            printf("\nCurrent Name: %s\nEnter New Name: ", m.name);
             scanf(" %[^\n]", m.name);
-            printf("Enter New Company: ");
+
+            printf("Current Company: %s\nEnter New Company: ", m.company);
             scanf(" %[^\n]", m.company);
-            printf("Enter New Quantity: ");
+
+            printf("Current Quantity: %d\nEnter New Quantity: ", m.quantity);
             scanf("%d", &m.quantity);
-            printf("Enter New Price: ");
+
+            printf("Current Price: %.2f\nEnter New Price: ", m.price);
             scanf("%f", &m.price);
-            printf("Enter New Expiry: ");
+
+            printf("Current Expiry: %s\nEnter New Expiry (DD/MM/YYYY): ", m.expiry);
             scanf(" %[^\n]", m.expiry);
+
+
+            printf("Current ID: %d\nEnter New ID (or same): ", m.id);
+            int newId;
+            scanf("%d", &newId);
+            if (newId != m.id) {
+                if (isMedicineIdExistsForUpdate(newId, m.id)) {
+                    printf("Error: Another medicine already has this ID! Keeping old ID.\n");
+                } else {
+                    m.id = newId;
+                }
+            }
         }
         fwrite(&m, sizeof(m), 1, temp);
     }
@@ -280,6 +358,7 @@ void updateMedicine() {
     else
         printf("ID not found.\n");
 }
+
 
 void deleteMedicine() {
     struct Medicine m;
@@ -316,11 +395,31 @@ void deleteMedicine() {
 // --------------------------------------------------------
 // SUPPLIER MANAGEMENT
 // --------------------------------------------------------
+int isSupplierIdExists(int id) {
+    struct Supplier s;
+    FILE *fp = fopen("supplier.dat", "rb");
+    if (!fp) return 0;
+
+    while (fread(&s, sizeof(s), 1, fp) == 1) {
+        if (s.id == id) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 void addSupplier() {
     struct Supplier s;
 
     printf("\nEnter ID: ");
     scanf("%d", &s.id);
+    if (isSupplierIdExists(s.id)) {
+    printf("Error: Supplier ID already exists!\n");
+    return;
+}
 
     printf("Enter Name: ");
     scanf(" %[^\n]", s.name);
@@ -385,6 +484,22 @@ void searchSupplier() {
     fclose(fp);
 }
 
+int isSupplierIdExistsForUpdate(int newId, int currentId) {
+    struct Supplier s;
+    FILE *fp = fopen("supplier.dat", "rb");
+    if (!fp) return 0;
+
+    while (fread(&s, sizeof(s), 1, fp) == 1) {
+        if (s.id == newId && s.id != currentId) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 void updateSupplier() {
     struct Supplier s;
     int id, found = 0;
@@ -398,12 +513,26 @@ void updateSupplier() {
     while (fread(&s, sizeof(s), 1, fp) == 1) {
         if (s.id == id) {
             found = 1;
-            printf("\nEnter New Name: ");
+
+            printf("\nCurrent Name: %s\nEnter New Name: ", s.name);
             scanf(" %[^\n]", s.name);
-            printf("Enter New Company: ");
+
+            printf("Current Company: %s\nEnter New Company: ", s.company);
             scanf(" %[^\n]", s.company);
-            printf("Enter New Contact: ");
+
+            printf("Current Contact: %s\nEnter New Contact: ", s.contact);
             scanf(" %[^\n]", s.contact);
+
+            printf("Current ID: %d\nEnter New ID (or same): ", s.id);
+            int newId;
+            scanf("%d", &newId);
+            if (newId != s.id) {
+                if (isSupplierIdExistsForUpdate(newId, s.id)) {
+                    printf("Error: Another supplier already has this ID! Keeping old ID.\n");
+                } else {
+                    s.id = newId;
+                }
+            }
         }
         fwrite(&s, sizeof(s), 1, temp);
     }
@@ -419,6 +548,7 @@ void updateSupplier() {
     else
         printf("ID not found.\n");
 }
+
 
 void deleteSupplier() {
     struct Supplier s;
@@ -455,11 +585,32 @@ void deleteSupplier() {
 // --------------------------------------------------------
 // CUSTOMER MANAGEMENT
 // --------------------------------------------------------
+int isCustomerIdExists(int id) {
+    struct Customer c;
+    FILE *fp = fopen("customer.dat", "rb");
+    if (!fp) return 0;
+
+    while (fread(&c, sizeof(c), 1, fp) == 1) {
+        if (c.id == id) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 void addCustomer() {
     struct Customer c;
 
     printf("\nEnter ID: ");
     scanf("%d", &c.id);
+
+    if (isCustomerIdExists(c.id)) {
+    printf("Error: Customer ID already exists!\n");
+    return;
+}
 
     printf("Enter Name: ");
     scanf(" %[^\n]", c.name);
@@ -524,6 +675,22 @@ void searchCustomer() {
     fclose(fp);
 }
 
+int isCustomerIdExistsForUpdate(int newId, int currentId) {
+    struct Customer c;
+    FILE *fp = fopen("customer.dat", "rb");
+    if (!fp) return 0;
+
+    while (fread(&c, sizeof(c), 1, fp) == 1) {
+        if (c.id == newId && c.id != currentId) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 void updateCustomer() {
     struct Customer c;
     int id, found = 0;
@@ -537,12 +704,26 @@ void updateCustomer() {
     while (fread(&c, sizeof(c), 1, fp) == 1) {
         if (c.id == id) {
             found = 1;
-            printf("\nEnter New Name: ");
+
+            printf("\nCurrent Name: %s\nEnter New Name: ", c.name);
             scanf(" %[^\n]", c.name);
-            printf("Enter New Contact: ");
+
+            printf("Current Contact: %s\nEnter New Contact: ", c.contact);
             scanf(" %[^\n]", c.contact);
-            printf("Enter New Address: ");
+
+            printf("Current Address: %s\nEnter New Address: ", c.address);
             scanf(" %[^\n]", c.address);
+
+            printf("Current ID: %d\nEnter New ID (or same): ", c.id);
+            int newId;
+            scanf("%d", &newId);
+            if (newId != c.id) {
+                if (isCustomerIdExistsForUpdate(newId, c.id)) {
+                    printf("Error: Another customer already has this ID! Keeping old ID.\n");
+                } else {
+                    c.id = newId;
+                }
+            }
         }
         fwrite(&c, sizeof(c), 1, temp);
     }
@@ -588,4 +769,3 @@ void deleteCustomer() {
     else
         printf("ID not found.\n");
 }
-
